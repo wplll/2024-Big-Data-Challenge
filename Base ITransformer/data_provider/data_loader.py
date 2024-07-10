@@ -224,6 +224,8 @@ class Dataset_Meteorology(Dataset):
         self.pred_len = size[2]
         self.is_augment = is_augment
         self.augment_prob = augment_prob
+        if self.augment_prob == 0:
+            self.is_augment = False
         print("is_augment:",self.is_augment)
         if self.is_augment:
             print("augment_prob:",self.augment_prob)
@@ -244,31 +246,24 @@ class Dataset_Meteorology(Dataset):
         repeat_era5 = repeat_era5.reshape(repeat_era5.shape[0], -1, repeat_era5.shape[3]) # (T, 36, S)
         data = reduce_mem_usage_np(data)
         repeat_era5 = reduce_mem_usage_np(repeat_era5)
-        selected_data_x = data[:, self.selected_stations]
-        selected_data_y = data[:, self.selected_stations]
+        selected_data = data[:, self.selected_stations]
         selected_covariate = repeat_era5[:, :, self.selected_stations]
         
         if debug:
-            selected_data_x = selected_data_x[:, :5]
-            selected_data_y = selected_data_y[:, :5]
+            selected_data = selected_data[:, :5]
             selected_covariate = selected_covariate[:, :, :5]
             self.selected_stations = self.selected_stations[:5]
 
-        self.full_data_x = []
-        self.full_data_y = []
+        self.full_data = []
         for station_id in tqdm(range(len(self.selected_stations)), desc="Pre-concatenating data", leave=False):
-            station_data_x = selected_data_x[:, station_id:station_id+1]
-            station_data_y = selected_data_y[:, station_id:station_id+1]
+            station_data = selected_data[:, station_id:station_id+1]
             station_covariate = selected_covariate[:, :, station_id:station_id+1].squeeze()
 
-            concatenated_x = np.concatenate([station_covariate, station_data_x], axis=1)
-            concatenated_y = np.concatenate([station_covariate, station_data_y], axis=1)
+            concatenated = np.concatenate([station_covariate, station_data], axis=1)
 
-            self.full_data_x.append(concatenated_x)
-            self.full_data_y.append(concatenated_y)
+            self.full_data.append(concatenated)
 
-        self.full_data_x = np.stack(self.full_data_x, axis=2) # (T, 37, S)
-        self.full_data_y = np.stack(self.full_data_y, axis=2) # (T, 37, S)
+        self.full_data = np.stack(self.full_data_x, axis=2) # (T, 37, S)
 
     def data_augmentation(self, data):
         """根据概率选择数据增强方法"""
@@ -319,7 +314,7 @@ class Dataset_Meteorology(Dataset):
         jitter = np.random.normal(0, jitter, data.shape)
         return data + jitter
 
-    def random_crop(self, data, crop_size=150):
+    def random_crop(self, data, crop_size=16):
         """随机裁剪"""
         if data.shape[0] > crop_size:
             start = np.random.randint(0, data.shape[0] - crop_size + 1)
@@ -354,8 +349,8 @@ class Dataset_Meteorology(Dataset):
         r_begin = s_end - self.label_len
         r_end = r_begin + self.label_len + self.pred_len
         
-        seq_x = self.full_data_x[s_begin:s_end, :, station_id] # (seq_len, 37)
-        seq_y = self.full_data_y[r_begin:r_end, :, station_id] # (label_len + pred_len, 37)
+        seq_x = self.full_data[s_begin:s_end, :, station_id] # (seq_len, 37)
+        seq_y = self.full_data[r_begin:r_end, :, station_id] # (label_len + pred_len, 37)
         if self.is_augment:
             seq_x = self.data_augmentation(seq_x)
             seq_y = self.data_augmentation(seq_y)
@@ -363,4 +358,4 @@ class Dataset_Meteorology(Dataset):
         return seq_x, seq_y
 
     def __len__(self):
-        return (len(self.full_data_x) - self.seq_len - self.pred_len + 1) * self.stations_num
+        return (len(self.full_data) - self.seq_len - self.pred_len + 1) * self.stations_num
