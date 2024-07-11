@@ -55,11 +55,12 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         for epoch in range(self.args.train_epochs):
             iter_count = 0
             train_loss = []
-
+            temp_loss = []
+            wind_loss = []
             self.model.train()
             epoch_time = time.time()
-            progress = tqdm(enumerate(train_loader), total=len(train_loader), leave=False)
-            for i, (batch_x, batch_y) in progress:
+            progress = tqdm(train_loader, total=len(train_loader), leave=False)
+            for batch_x, batch_y in progress:
                 iter_count += 1
                 model_optim.zero_grad()
                 batch_x = batch_x.float().to(self.device)
@@ -87,6 +88,8 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     batch_y_wind = batch_y[:, -self.args.pred_len:, -1:].to(self.device)
                     loss = (criterion(outputs_temp, batch_y_temp) + criterion(outputs_wind, batch_y_wind)) / 2
                     train_loss.append(loss.item())
+                    temp_loss.append(criterion(outputs_temp, batch_y_temp).item())
+                    wind_loss.append(criterion(outputs_wind, batch_y_wind).item())
 
                 # if (i + 1) % 100 == 0:
                 #     print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
@@ -95,7 +98,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 #     print('\tspeed: {:.4f}s/iter; left time: {:.4f}s'.format(speed, left_time))
                 #     iter_count = 0
                 #     time_now = time.time()
-                progress.set_description("loss : : {:.7f} ".format(np.average(train_loss)))
+                progress.set_description("temp loss : {:.7f} , wind loss : {:.7f} ".format(np.average(temp_loss),np.average(wind_loss)))
                 if self.args.use_amp:
                     scaler.scale(loss).backward()
                     scaler.step(model_optim)
@@ -109,6 +112,8 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f}".format(
                 epoch + 1, train_steps, train_loss))
+            print(f"Temp Loss : {np.average(temp_loss)} , Wind Loss : {np.average(wind_loss)}")
+            
             torch.save(self.model.state_dict(), path + '/' + f'checkpoint_{epoch}_train_{train_loss:.3f}.pth')
             adjust_learning_rate(model_optim, epoch + 1, self.args)
 

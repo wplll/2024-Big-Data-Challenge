@@ -18,6 +18,7 @@ class Model(nn.Module):
         self.output_attention = configs.output_attention
         self.mode = configs.mode
         # Embedding
+        self.time_embedding = False
         if configs.time_embedding in ["lstm", "gru"]:
             self.time_embedding = True
             if configs.time_embedding == "lstm":
@@ -47,13 +48,16 @@ class Model(nn.Module):
             norm_layer=torch.nn.LayerNorm(configs.d_model)
         )
         # memory
+        self.use_mem = False
         if configs.use_mem:
             self.use_mem = True
             self.mem = nn.Parameter(torch.FloatTensor(1, configs.d_model, configs.mem_size).normal_(0.0, 1.0))
             print(f"Using memory block ,the memory size is :{configs.mem_size}")
 
         # Decoder
-        if configs.time_embedding in ["lstm", "gru"]:
+        self.time_decode = False
+        if configs.time_decode in ["lstm", "gru"]:
+            self.time_decode = True
             if configs.time_embedding == "lstm":
                 self.projection = nn.LSTM(configs.d_model, configs.pred_len, batch_first=True, bidirectional=False)
             else:
@@ -96,7 +100,7 @@ class Model(nn.Module):
             att = att + (means[:, 0, -1:].unsqueeze(2).repeat(1, 1, self.pred_len))
 
         
-        if self.time_embedding:
+        if self.time_decode:
             dec_out,_ = self.projection(enc_out)
         else:
             dec_out = self.projection(enc_out)

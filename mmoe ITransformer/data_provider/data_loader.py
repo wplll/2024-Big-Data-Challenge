@@ -46,8 +46,8 @@ class Dataset_Meteorology(Dataset):
         self.root_path = root_path
         self.data_path = data_path
         self.__read_data__()
-        self.stations_num = self.data_x.shape[-1]
-        self.tot_len = len(self.data_x) - self.seq_len - self.pred_len + 1
+        self.stations_num = self.full_data.shape[-1]
+        self.tot_len = len(self.full_data) - self.seq_len - self.pred_len + 1
 
     def __read_data__(self):
         data_temp = np.load(os.path.join(self.root_path, 'temp.npy')) # (T, S, 1)    
@@ -62,7 +62,7 @@ class Dataset_Meteorology(Dataset):
         repeat_era5 = reduce_mem_usage_np(repeat_era5)
         # Pre-concatenate covariates with data
         self.full_data = []
-        for station_id in tqdm(range(self.data_x.shape[1]),desc="Pre-concatenating data"):
+        for station_id in tqdm(range(data_temp.shape[1]),desc="Pre-concatenating data"):
             station_data_y_temp = data_temp[:, station_id:station_id+1]
             station_data_y_wind = data_wind[:, station_id:station_id+1]
             station_covariate = repeat_era5[:, :, station_id:station_id+1].squeeze()

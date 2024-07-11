@@ -12,7 +12,7 @@ args = {
     'label_len': 1,
     'pred_len': 24,
     'enc_in': 37,
-    'd_model': 64,
+    'd_model': 128,
     'n_heads': 8,
     'e_layers': 1,
     'd_ff': 512,
@@ -20,7 +20,10 @@ args = {
     'activation': 'gelu',
     'output_attention': False,
     'is_positional_embedding': False,
-    'time_embedding': 'lstm'
+    'time_embedding': 'lstm',
+    'mode':0,
+    'use_mem':1,
+    'mem_size':512
 }
 
 
@@ -30,9 +33,9 @@ class Struct:
 arg = Struct(**args)
 
 if __name__ == '__main__':
-    task = 'temp' # wind
+    task = 'temp' # temp/wind
     checkpath = r'D:\CODE\game\大数据竞赛\code\baseline\baseline\checkpoints'
-    path = fr'v1_iTransformer_Meteorology_ftMS_sl168_ll1_pl24_dm64_nh8_el1_df512_global_{task}'
+    path = fr'v1_iTransformer_Meteorology_ftMS_sl168_ll1_pl24_dm128_nh8_el1_df512_global_{task}'
     path = os.path.join(checkpath,path)
     model = iTransformer.Model(arg).cuda()
  

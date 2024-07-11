@@ -236,7 +236,7 @@ class Dataset_Meteorology(Dataset):
         self.selected_stations = selected_stations
         self.__read_data__(debug)
         self.stations_num = len(self.selected_stations)
-        self.tot_len = len(self.full_data_x) - self.seq_len - self.pred_len + 1
+        self.tot_len = len(self.full_data) - self.seq_len - self.pred_len + 1
 
     def __read_data__(self, debug):
         data = np.load(os.path.join(self.root_path, self.data_path)) # (T, S, 1)
@@ -263,7 +263,7 @@ class Dataset_Meteorology(Dataset):
 
             self.full_data.append(concatenated)
 
-        self.full_data = np.stack(self.full_data_x, axis=2) # (T, 37, S)
+        self.full_data = np.stack(self.full_data, axis=2) # (T, 37, S)
 
     def data_augmentation(self, data):
         """根据概率选择数据增强方法"""

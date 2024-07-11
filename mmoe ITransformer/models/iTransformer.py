@@ -37,7 +37,7 @@ class Model(nn.Module):
         self.wind_encode = nn.GRU(configs.d_model, configs.d_model//2, batch_first=True, bidirectional=True, dropout=configs.dropout)
         # Decoder
         self.temp_projection = nn.Linear(configs.d_model, configs.d_model, bias=True)
-        self.wind_projection = nn.Linear(configs.d_model, configs.pred_len, bias=True)
+        self.wind_projection = nn.Linear(configs.d_model, configs.d_model, bias=True)
         self.temp_decoder = nn.GRU(configs.d_model, configs.pred_len, batch_first=True, bidirectional=False)
         self.wind_decoder = nn.GRU(configs.d_model, configs.pred_len, batch_first=True, bidirectional=False)
         
@@ -63,14 +63,12 @@ class Model(nn.Module):
         enc_out, attns = self.encoder(enc_out, attn_mask=None)
         enc_out[:,-2:-1,:] += temp
         enc_out[:,-1:,:] += wind
-
+        
         # Decode
-        dec_out = self.projection(enc_out)
-        dec_out_temp = self.temp_projection(dec_out)
-        dec_out_wind = self.wind_projection(dec_out)
-        # Proj
-        out_temp = self.temp_projection(dec_out_temp).permute(0, 2, 1)[:, :, :N]
-        out_wind = self.wind_projection(dec_out_wind).permute(0, 2, 1)[:, :, :N]
+        dec_out_temp = self.temp_projection(enc_out)
+        dec_out_wind = self.wind_projection(enc_out)
+        out_temp = self.temp_decoder(dec_out_temp)[0].permute(0, 2, 1)[:, :, :N]
+        out_wind = self.wind_decoder(dec_out_wind)[0].permute(0, 2, 1)[:, :, :N]
 
         # De-Normalization from Non-stationary Transformer
         out_temp = out_temp * (stdev[:, 0, :].unsqueeze(1).repeat(1, self.pred_len, 1))
